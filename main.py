@@ -1,67 +1,82 @@
-
+import math
 import random
-import numpy as np
-import matplotlib.pyplot as plt
 
-def calculate_projectile_shot(target_position, initial_speed, target_width):
-    gravity = 10
-    angle = np.radians(30)
-    
-    def shoot(target_position, V0):
-        nonlocal gravity, angle
-        t_launch = V0 * np.sin(angle) / gravity
-        t_flight = 2 * V0 * np.sin(angle) / gravity
-        t_land = t_launch
+def atis_sayisi_ve_hiz_bul():
+    # Topun başlangıç hızı
+    hiz_alt_sinir = 330
+    hiz_ust_sinir = 1800
+    ilk_hiz = (hiz_alt_sinir + hiz_ust_sinir) / 2
 
-        x_range = V0 * np.cos(angle) * t_flight
-        max_height = (V0 ** 2) * (np.sin(angle) ** 2) / (2 * gravity)
-        target_distance = target_position - 0.5 * target_width
-        target_range = [target_distance, target_distance + target_width]
+    # Hedef özellikleri
+    uzaklik_mesafesi = 20000 + 200 * random.randint(-10, 10)
+    genislik_baslangic = uzaklik_mesafesi
+    genislik_bitis = uzaklik_mesafesi + 1000 + 100 * random.randint(-2, 2)
 
-        if x_range < target_range[0]:
-            return "Short"
-        elif x_range > target_range[1]:
-            return "Long"
+    # Hedefin önünde veya arkasında olma durumu
+    hedef_onunde = False
+
+    # Atış sayısı
+    atis_sayisi = 0
+
+    # Atış yapılacak yükseklik (deniz seviyesinden okul numarasının son 2 hanesi kadar yükseklik)
+    top_konumu = [0, 0]  # Burayı kendi okul numaranızın son 2 hanesine göre ayarlayın
+
+    while True:
+        # Atış sayısını arttır
+        atis_sayisi += 1
+
+        # Atış yap
+        hiz = ilk_hiz
+        if hedef_onunde:
+            hiz_alt_sinir = hiz
         else:
-            return "On Target"
+            hiz_ust_sinir = hiz
+        hiz = (hiz_alt_sinir + hiz_ust_sinir) / 2
 
-    shot_count = 0
-    hit_target = False
-    while not hit_target:
-        shot_count += 1
-        status = shoot(target_position, initial_speed)
-        if status == "Short":
-            initial_speed = (initial_speed + 330) / 2  # Update speed (using lower bound)
-        elif status == "Long":
-            initial_speed = (initial_speed + 1800) / 2  # Update speed (using upper bound)
-        else:
-            hit_target = True
+        # Hedefi vurup vuramadığını kontrol et
+        vuruldu_mu, hedef_onunde = hedefi_vur(hiz, top_konumu, uzaklik_mesafesi, genislik_baslangic, genislik_bitis)
 
-    return shot_count, initial_speed
+        # Eğer hedef vurulduysa veya hedef önünde veya arkasında değilse döngüden çık
+        if vuruldu_mu or not hedef_onunde:
+            break
 
-# Randomize target position, width, and initial speed
-target_distance = 20000 + 200 * random.randint(-10, 10)
-target_width = 1000 + 100 * random.randint(-2, 2)
-target_position = target_distance + random.randint(0, 99)  # Random target position
-initial_speed = (330 + 1800) / 2  # Initial speed
+    return atis_sayisi, hiz
 
-# Calculate the number of shots and the final speed required to hit the target
-shot_count, final_speed = calculate_projectile_shot(target_position, initial_speed, target_width)
+def hedefi_vur(hiz, top_konumu, uzaklik_mesafesi, genislik_baslangic, genislik_bitis):
+    # Fiziksel sabitler
+    g = 9.81  # Yer çekimi ivmesi (m/s^2)
 
-# Print the results
-print("Number of sh")
-# Plot the target and shot coordinates
-plt.plot(target_position, 0, 'ro', label='Target')
-for i in range(shot_count):
-    plt.plot(target_position + random.uniform(-target_width/2, target_width/2), 0, 'bo', label='Shot')
-    plt.xlabel('Distance (meter)')
-    plt.ylabel('Height (meter)')
-    plt.title('Projectile Shot - Target and Shot Coordinates')
-    plt.grid(True)
+    # Atış açısı (radyan cinsinden)
+    atis_acisi = math.radians(30)
 
-    plt.legend()
-    plt.show()
-print("test")
+    # Atışın süresi
+    t_uclus = 2 * hiz * math.sin(atis_acisi) / g
 
+    # Atışın menzili
+    x_menzil = hiz * math.cos(atis_acisi) * t_uclus
 
+    # Atışın yüksekliği
+    yukseklik = hiz * math.sin(atis_acisi) * t_uclus - 0.5 * g * t_uclus ** 2
 
+    # Atışın düştüğü yerin koordinatları
+    dusus_yeri = [x_menzil, yukseklik + top_konumu[1]]
+
+    # Hedefin konumu
+    hedef_merkez = (genislik_baslangic + genislik_bitis) / 2
+
+    # Eğer düşüş yeri, hedefin önünde ise
+    if dusus_yeri[0] < hedef_merkez:
+        hedef_onunde = True
+    else:
+        hedef_onunde = False
+
+    # Eğer düşüş yeri hedefin içindeyse vuruş başarılıdır
+    if genislik_baslangic <= dusus_yeri[0] <= genislik_bitis:
+        return True, hedef_onunde
+    else:
+        return False, hedef_onunde
+
+# Atış sayısı ve gerekli hızı bul
+atis_sayisi, gereken_hiz = atis_sayisi_ve_hiz_bul()
+print("Gerekli atış sayısı:", atis_sayisi)
+print("Gerekli hız:", gereken_hiz)
